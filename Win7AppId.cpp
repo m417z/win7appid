@@ -1,11 +1,15 @@
-// Win7AppId.cpp : Defines the entry point for the console application.
 //
-
-#include "stdafx.h"
+// Win7AppId
+// Author: David Roe (didroe)
+// The code's a bit rough and ready but it does the job
+//
+// Compile with VS 2010 express using command:
+//     cl /EHsc /D _UNICODE Win7AppId.cpp /link ole32.lib
 
 #include <windows.h>
 #include <shobjidl.h>
 #include <propkey.h>
+#include <tchar.h>
 
 #include <iostream>
 
@@ -36,19 +40,24 @@ int _tmain(int argc, _TCHAR* argv[])
 			"Failed to create ShellLink object");
 	
 	IPersistFile* file; 
-    doOrDie(link->QueryInterface(IID_PPV_ARGS(&file)),
+	doOrDie(link->QueryInterface(IID_PPV_ARGS(&file)),
 			"Failed to obtain PersistFile interface"); 
 
-	doOrDie(file->Load(argv[1], STGM_READWRITE),
-		    "Failed to load shortcut file");
-
+	if (argc > 2) {
+		doOrDie(file->Load(argv[1], STGM_READWRITE),
+				"Failed to load shortcut file");
+	} else {
+		doOrDie(file->Load(argv[1], STGM_READ | STGM_SHARE_DENY_NONE),
+				"Failed to load shortcut file");
+	}
+    
 	IPropertyStore* store; 
-    doOrDie(link->QueryInterface(IID_PPV_ARGS(&store)),
+	doOrDie(link->QueryInterface(IID_PPV_ARGS(&store)),
 			"Failed to obtain PropertyStore interface"); 
 
 	PROPVARIANT pv;
 	doOrDie(store->GetValue(PKEY_AppUserModel_ID, &pv),
-		    "Failed to retrieve AppId");
+			"Failed to retrieve AppId");
 	
 	if (pv.vt != VT_EMPTY) {
 		if (pv.vt != VT_LPWSTR) {
@@ -70,6 +79,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 		doOrDie(store->SetValue(PKEY_AppUserModel_ID, pv),
 				"Failed to set AppId");
+
+        // Not sure if we need to do this
+        pv.pwszVal = NULL;
 		PropVariantClear(&pv);
 
 		doOrDie(store->Commit(),
@@ -85,4 +97,3 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	return 0;
 }
-
